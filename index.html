@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<script id="vertex-shader" type="x-shader/x-vertex">
+
+attribute  vec4 vPosition;
+attribute  vec4 vColor;
+attribute  vec2 vTexCoord;
+
+varying vec4 fColor;
+varying vec2 fTexCoord;
+
+uniform mat4 modelViewMatrix;
+uniform mat4 projectionMatrix;
+
+void main()
+{
+    gl_Position = projectionMatrix*modelViewMatrix*vPosition;
+    fColor = vColor;
+    fTexCoord = vTexCoord;
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+
+#ifdef GL_ES
+precision highp float;
+#endif
+
+varying vec4 fColor;
+varying  vec2 fTexCoord;
+
+uniform sampler2D texture;
+
+void main()
+{
+
+    gl_FragColor = texture2D( texture, fTexCoord );
+    // gl_FragColor = fColor;
+}
+</script>
+
+<script id="sphere-vertex" type="x-shader/x-vertex">
+
+attribute vec4 vPosition;
+attribute vec4 vNormal;
+
+uniform vec4 translation;
+uniform vec4 scale;
+
+uniform mat4 modelViewMatrix;
+uniform mat4 projectionMatrix;
+
+uniform vec4 ambientProduct, diffuseProduct, specularProduct;
+uniform vec4 lightPosition;
+uniform float shininess;
+uniform mat3 normalMatrix;
+
+uniform bool isPhongLighting;
+
+varying vec3 PN, PL, PE;
+
+void main()
+{
+    vec3 pos = (modelViewMatrix * (vPosition+translation)).xyz;
+
+    if(lightPosition.w == 0.0) PL = normalize(lightPosition.xyz);
+    else PL = normalize( lightPosition.xyz - pos );
+
+    PE =  -normalize(pos);
+    PN = normalize( normalMatrix*vNormal.xyz);
+
+    gl_Position = projectionMatrix*modelViewMatrix*((vPosition*scale) + translation);
+
+}
+</script>
+
+
+<script id="sphere-fragment" type="x-shader/x-fragment">
+
+#ifdef GL_ES
+precision highp float;
+#endif
+
+uniform vec4 fColor;
+
+uniform bool isPhongLighting;
+
+uniform vec4 ambientProduct;
+uniform vec4 diffuseProduct;
+uniform vec4 specularProduct;
+uniform float shininess;
+
+varying vec3 PN, PL, PE;
+
+vec4 fnColor = vec4(0.0);
+
+void main()
+{
+
+	if(isPhongLighting)
+	{
+	    vec3 H = normalize( PL + PE );
+	    vec4 ambient = ambientProduct;
+
+	    float Kd = max( dot(PL, PN), 0.0 );
+	    vec4  diffuse = Kd*diffuseProduct;
+
+	    float Ks = pow( max(dot(PN, H), 0.0), shininess );
+	    vec4  specular = Ks * specularProduct;
+
+	    if( dot(PL, PN) < 0.0 ) specular = vec4(0.0, 0.0, 0.0, 1.0);
+	    fnColor += ambient + diffuse +specular;
+	    fnColor.a = 1.0;
+
+	}
+    gl_FragColor = fColor + fnColor;
+    // gl_FragColor = fnColor;
+
+}
+</script>
+
+<script type="text/javascript" src="webgl-utils.js"></script>
+<script type="text/javascript" src="initShaders.js"></script>
+<script type="text/javascript" src="MV.js"></script>
+
+<body>
+	<canvas style="border:1px solid black;" id="gl-canvas" width="512" height="512">
+		Oops ... your browser doesn't support the HTML5 canvas element
+	</canvas>
+	<img id = "texImage" src = "snow.jpg" hidden></img>
+	<br />
+	<button onclick="plus_button()">W</button>
+	<button onclick="minus_button()">S</button>
+	<script type="text/javascript" src="script.js"></script>
+</body>
+</html>
